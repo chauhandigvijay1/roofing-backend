@@ -1,7 +1,7 @@
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert");
 const http = require("node:http");
-const { app, PRIMARY_MODEL, CANDIDATE_MODELS, getGracefulFallback } = require("../server");
+const { app, PRIMARY_MODEL, CANDIDATE_MODELS, SYSTEM_PROMPT, buildSystemPrompt, getGracefulFallback } = require("../server");
 
 describe("Roofing Backend API Tests", () => {
   let server;
@@ -80,6 +80,28 @@ describe("Roofing Backend API Tests", () => {
     assert.ok(data.model);
   });
 
+  test("POST /api/chat accepts brand object and responds for Drew Boy", async () => {
+    const res = await fetch(`${baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "Tell me about your building science inspection in Austin",
+        history: [],
+        brand: {
+          name: "Instant Roofing & Exteriors",
+          city: "Austin, TX",
+          phone: "(512) 888-9999",
+          email: "support@instantrfg.com",
+          isDrew: true,
+        },
+      }),
+    });
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(typeof data.reply === "string");
+    assert.ok(data.reply.length > 20);
+  });
+
   test("POST /api/chat handles booking and calendar inquiries", async () => {
     const res = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
@@ -110,6 +132,39 @@ describe("Roofing Backend API Tests", () => {
     assert.ok(data.reply.length > 50);
   });
 
+  test("buildSystemPrompt generates tailored system prompt based on brand", () => {
+    const drewPrompt = buildSystemPrompt({
+      name: "Instant Roofing & Exteriors",
+      city: "Austin, TX",
+      isDrew: true,
+    });
+    assert.ok(drewPrompt.includes("Drew Boy"));
+    assert.ok(drewPrompt.includes("Building Science"));
+    assert.ok(drewPrompt.includes("Texas HB 2102"));
+    assert.ok(drewPrompt.includes("GAF Certified Plus"));
+    assert.ok(drewPrompt.includes("Housecall Pro"));
+
+    // Other roofers in Austin should NOT get Drew Boy prompt
+    const otherAustinPrompt = buildSystemPrompt({
+      name: "Apex Roofing",
+      city: "Austin, TX",
+      isDrew: false,
+    });
+    assert.strictEqual(otherAustinPrompt.includes("Drew Boy"), false);
+
+    const paramountPrompt = buildSystemPrompt({
+      name: "Paramount Roofing Inc.",
+      city: "Houston, TX",
+      isDrew: false,
+    });
+    assert.ok(paramountPrompt.includes("Paramount Roofing"));
+    assert.ok(paramountPrompt.includes("Richard W. Keathley"));
+    assert.ok(paramountPrompt.includes("Houston"));
+
+    const genericPrompt = buildSystemPrompt(null);
+    assert.strictEqual(genericPrompt, SYSTEM_PROMPT);
+  });
+
   test("getGracefulFallback provides appropriate offline responses", () => {
     const bookReply = getGracefulFallback("I want to book an appointment");
     assert.ok(bookReply.includes("inspection") || bookReply.includes("schedule"));
@@ -119,5 +174,11 @@ describe("Roofing Backend API Tests", () => {
 
     const generalReply = getGracefulFallback("Hello");
     assert.ok(generalReply.includes("Premium Roofing"));
+
+    const drewFallback = getGracefulFallback("Hello", { isDrew: true, name: "Instant Roofing & Exteriors" });
+    assert.ok(drewFallback.includes("Instant Roofing") || drewFallback.includes("Drew Boy"));
+
+    const otherAustinFallback = getGracefulFallback("Hello", { isDrew: false, name: "Apex Roofing", city: "Austin, TX" });
+    assert.strictEqual(otherAustinFallback.includes("Drew Boy"), false);
   });
 });

@@ -54,6 +54,76 @@ CORE CAPABILITIES & INSTRUCTIONS:
 - Format responses cleanly using markdown bullet points, bold headers, and concise sections.
 - Keep responses readable and high-impact. Never sound like a basic generic bot. Deliver a world-class experience.`;
 
+function buildSystemPrompt(brand) {
+  const isDrew = Boolean(
+    brand && (
+      brand.isDrew === true ||
+      (brand.name && brand.name.toLowerCase().includes("instant"))
+    )
+  );
+
+  const isParamount = Boolean(
+    brand && brand.name && brand.name.toLowerCase().includes("paramount")
+  );
+
+  if (isDrew) {
+    const brandName = brand?.name || "Instant Roofing & Exteriors";
+    const phone = brand?.phone || "(512) 888-9999";
+    const city = brand?.city || "Austin, TX";
+    const email = brand?.email || "support@instantrfg.com";
+
+    return `You are the Elite AI Roofing Concierge for ${brandName} in ${city}, founded by Drew Boy.
+Drew Boy holds a Master of Science in Technology Management & Building Science from Texas State University and carries forward over 15 years of Central Texas roofing excellence (building upon his family's multi-generational Wolfpack Roofing legacy).
+
+Key Credentials & Standards:
+- GAF Certified Plus Contractor (50-year non-prorated manufacturer warranty on Timberline HDZ architectural shingles).
+- Austin & Central Texas Building Science Experts: Attic thermodynamic ventilation modeling, thermal barrier analysis, Class 4 impact hail-resistant systems (Armorshield II), and heat-reflective standing seam metal roofing.
+- 100% Texas HB 2102 Deductible Compliance: Strict adherence to Texas law prohibiting deductible waiving or rebating. Full transparent insurance restoration, forensic damage assessments, and claim integrity protection.
+- Operational Infrastructure: Seamless dispatch and calendar scheduling synced with Housecall Pro.
+- Direct Contact: Phone: ${phone}, Email: ${email}.
+
+CORE CAPABILITIES & INSTRUCTIONS:
+
+1. INTELLIGENT CALENDAR BOOKING & SCHEDULING (HOUSECALL PRO INTEGRATED):
+- Proactively offer priority Austin inspection openings (Morning slots: 9:00 AM or 11:30 AM; Afternoon slots: 2:00 PM or 4:30 PM for today or the next business day).
+- Request booking details: Full Name, Phone Number, Greater Austin Property Address, and Roof Concern (Class 4 hail damage, active storm leak, GAF replacement, building science attic inspection).
+- Lock reservation: State clearly that the slot is reserved in Drew Boy's master Housecall Pro dispatch calendar, and automated .ics calendar invite and SMS confirmation are dispatched.
+
+2. ADVANCE PAYMENTS, DEPOSITS, INVOICE GENERATION:
+- Transparent payment options: Major credit cards, ACH, and 0% APR financing for 12 months.
+- Generate an instant professional prototype invoice summary:
+  - Invoice Number: e.g., #INV-2026-8824
+  - Itemized Item: "Priority Inspection & Building Science Scope / Materials Advance Deposit" ($150 - $500)
+  - Status: "Staged & Ready for Payment"
+  - Compliance Note: "100% Texas HB 2102 Deductible Compliant"
+- Confirm automated dispatch of tax-compliant PDF invoice and official digital receipt to their email address.
+
+3. EXPERT BUILDING SCIENCE GUIDANCE:
+- Deliver authoritative advice on Austin's climate challenges (severe spring hail, extreme summer radiant attic heat, wind storms). Emphasize Drew Boy's building science approach, GAF Timberline HDZ systems, and free forensic roof inspections.
+
+4. TONE & PRESENTATION:
+- Grounded in building science, authoritative, polished, responsive, and executive. Use markdown formatting.`;
+  }
+
+  if (isParamount) {
+    const brandName = brand?.name || "Paramount Roofing Inc.";
+    const phone = brand?.phone || "(713) 789-7663";
+    const city = brand?.city || "Houston, TX";
+    const email = brand?.email || "info@paramountroofing.com";
+
+    return `You are the Elite AI Roofing Concierge for ${brandName} in ${city}, led by Richard W. Keathley.
+Paramount Roofing Inc. is Houston's premier roofing authority with decades of commercial flat roofing (TPO, PVC, modified bitumen) and residential architectural shingle replacement across Greater Houston and the Gulf Coast.
+Phone: ${phone}, Email: ${email}.
+
+CORE CAPABILITIES & INSTRUCTIONS:
+- Schedule priority Greater Houston inspections and hurricane/storm restoration scopes.
+- Handle advance deposit payments, itemized PDF invoices, and email dispatch.
+- Advise on high-wind hurricane strapping, flat roof commercial drainage, and GAF/Owens Corning systems.`;
+  }
+
+  return SYSTEM_PROMPT;
+}
+
 let groq = null;
 function getGroq() {
   if (!groq) {
@@ -69,11 +139,22 @@ function getGroq() {
 }
 
 // Fallback response generator if all external AI services are unavailable
-function getGracefulFallback(userMessage = "") {
+function getGracefulFallback(userMessage = "", brand = null) {
   const lower = (userMessage || "").toLowerCase();
+  const isDrew = Boolean(
+    brand && (
+      brand.isDrew === true ||
+      (brand.name && brand.name.toLowerCase().includes("instant"))
+    )
+  );
+  const isParamount = Boolean(
+    brand && brand.name && brand.name.toLowerCase().includes("paramount")
+  );
+
   if (lower.includes("book") || lower.includes("schedule") || lower.includes("appointment") || lower.includes("inspect")) {
+    const company = isDrew ? "Drew Boy & Instant Roofing & Exteriors in Austin" : isParamount ? "Paramount Roofing Inc." : "our certified specialists";
     return (
-      "I would be delighted to schedule a free roof inspection for you! Our certified specialists have priority openings tomorrow at 9:00 AM, 11:30 AM, and 2:00 PM.\n\n" +
+      `I would be delighted to schedule a free roof inspection for you with ${company}! We have priority openings tomorrow at 9:00 AM, 11:30 AM, and 2:00 PM.\n\n` +
       "To hold your slot in our calendar, please reply with:\n" +
       "• Your Full Name\n" +
       "• Phone Number\n" +
@@ -81,26 +162,44 @@ function getGracefulFallback(userMessage = "") {
       "Once received, we will reserve your appointment and send a calendar invitation directly to your phone."
     );
   }
+
   if (lower.includes("pay") || lower.includes("deposit") || lower.includes("invoice") || lower.includes("receipt")) {
+    const complianceLine = isDrew ? "• **Texas HB 2102 Compliant**: Deductible integrity fully protected\n" : "";
     return (
       "We make payments and invoicing seamless!\n\n" +
-      "• **Invoice #INV-2026-7840**: Roof Project Advance Deposit ($250.00)\n" +
+      "• **Invoice #INV-2026-8824**: Roof Project Advance Deposit ($250.00)\n" +
       "• **Payment Method**: Secure Card/ACH or 0% APR Financing\n" +
+      complianceLine +
       "• **Receipt & Invoice Dispatch**: Sent automatically to your email upon confirmation.\n\n" +
       "Please share your preferred email address so we can route your official itemized PDF invoice and secure payment confirmation!"
     );
   }
+
+  if (isDrew) {
+    return (
+      "Welcome to Instant Roofing & Exteriors in Austin, TX! Founded by Drew Boy (MS Building Science, Texas State), we provide GAF Certified Plus replacements, Class 4 hail defense, 24/7 emergency leak response, and 100% Texas HB 2102 compliant insurance restoration.\n\n" +
+      "How can Drew and our team assist you today? You can ask to book a free roof inspection, request an invoice or estimate, or learn about our building science roofing systems."
+    );
+  }
+
+  if (isParamount) {
+    return (
+      "Welcome to Paramount Roofing Inc.! Led by Richard W. Keathley in Houston, TX, we provide commercial flat roofing, lifetime-warranted residential replacements, and emergency storm repairs.\n\n" +
+      "How can I assist you today? You can ask to book a free roof inspection, request an invoice or estimate, or learn about our roofing options."
+    );
+  }
+
   return (
     "Welcome to Premium Roofing! We provide 24/7 emergency roof repairs, lifetime-warranted replacements, free inspections, and flexible 0% APR financing.\n\n" +
     "How can I assist you today? You can ask to book a free roof inspection, request an invoice or estimate, or learn about our roofing options."
   );
 }
 
-async function generateChatCompletion(messages, latestUserMessage = "") {
+async function generateChatCompletion(messages, latestUserMessage = "", brand = null) {
   const groqClient = getGroq();
   if (!groqClient) {
     return {
-      reply: getGracefulFallback(latestUserMessage),
+      reply: getGracefulFallback(latestUserMessage, brand),
       modelUsed: "offline-fallback",
     };
   }
@@ -124,7 +223,7 @@ async function generateChatCompletion(messages, latestUserMessage = "") {
 
   console.error("[Groq] All candidate models failed, returning graceful fallback response:", lastError?.message);
   return {
-    reply: getGracefulFallback(latestUserMessage),
+    reply: getGracefulFallback(latestUserMessage, brand),
     modelUsed: "graceful-fallback",
   };
 }
@@ -144,7 +243,7 @@ app.get("/health", (_req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, history } = req.body || {};
+    const { message, history, brand } = req.body || {};
 
     // Immediate fast-path for warm-up pings
     if (message === "ping") {
@@ -164,13 +263,15 @@ app.post("/api/chat", async (req, res) => {
           .map((h) => ({ role: h.role, content: h.content }))
       : [];
 
+    const activeSystemPrompt = buildSystemPrompt(brand);
+
     const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: activeSystemPrompt },
       ...sanitizedHistory,
       { role: "user", content: message.trim() },
     ];
 
-    const result = await generateChatCompletion(messages, message);
+    const result = await generateChatCompletion(messages, message, brand);
     return res.status(200).json({
       reply: result.reply,
       model: result.modelUsed,
@@ -178,7 +279,7 @@ app.post("/api/chat", async (req, res) => {
   } catch (err) {
     console.error("Chat endpoint error:", err);
     // Always return 200 with assistant reply so client frontend never errors
-    const fallbackReply = getGracefulFallback(req.body?.message);
+    const fallbackReply = getGracefulFallback(req.body?.message, req.body?.brand);
     return res.status(200).json({
       reply: fallbackReply,
       model: "error-recovery",
@@ -199,6 +300,7 @@ module.exports = {
   PRIMARY_MODEL,
   CANDIDATE_MODELS,
   SYSTEM_PROMPT,
+  buildSystemPrompt,
   generateChatCompletion,
   getGracefulFallback,
 };
