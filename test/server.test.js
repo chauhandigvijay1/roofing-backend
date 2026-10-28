@@ -93,6 +93,30 @@ describe("Roofing Backend API Tests", () => {
           phone: "(512) 888-9999",
           email: "support@instantrfg.com",
           isDrew: true,
+          isRichard: false,
+        },
+      }),
+    });
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.ok(typeof data.reply === "string");
+    assert.ok(data.reply.length > 20);
+  });
+
+  test("POST /api/chat accepts brand object and responds for Richard & David", async () => {
+    const res = await fetch(`${baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "Tell me about your commercial flat roof inspection in Houston",
+        history: [],
+        brand: {
+          name: "Paramount Roofing Inc.",
+          city: "Houston, TX",
+          phone: "(713) 748-4000",
+          email: "service@paramountroofing.com",
+          isDrew: false,
+          isRichard: true,
         },
       }),
     });
@@ -152,14 +176,34 @@ describe("Roofing Backend API Tests", () => {
     });
     assert.strictEqual(otherAustinPrompt.includes("Drew Boy"), false);
 
+    // Richard & David in Houston
     const paramountPrompt = buildSystemPrompt({
       name: "Paramount Roofing Inc.",
       city: "Houston, TX",
-      isDrew: false,
+      isRichard: true,
     });
     assert.ok(paramountPrompt.includes("Paramount Roofing"));
-    assert.ok(paramountPrompt.includes("Richard W. Keathley"));
+    assert.ok(paramountPrompt.includes("Richard W. Keathley and David"));
     assert.ok(paramountPrompt.includes("Houston"));
+    assert.ok(paramountPrompt.includes("31+ years"));
+    assert.ok(paramountPrompt.includes("BBB A+"));
+    assert.ok(paramountPrompt.includes("Houston Apartment Association"));
+
+    // Paramount outside Houston should NOT trigger Richard prompt (dual condition check)
+    const paramountDallasPrompt = buildSystemPrompt({
+      name: "Paramount Roofing Inc.",
+      city: "Dallas, TX",
+      isRichard: false,
+    });
+    assert.strictEqual(paramountDallasPrompt.includes("Richard W. Keathley"), false);
+
+    // Apex in Houston should NOT trigger Richard prompt
+    const apexHoustonPrompt = buildSystemPrompt({
+      name: "Apex Roofing",
+      city: "Houston, TX",
+      isRichard: false,
+    });
+    assert.strictEqual(apexHoustonPrompt.includes("Richard W. Keathley"), false);
 
     const genericPrompt = buildSystemPrompt(null);
     assert.strictEqual(genericPrompt, SYSTEM_PROMPT);
@@ -175,8 +219,11 @@ describe("Roofing Backend API Tests", () => {
     const generalReply = getGracefulFallback("Hello");
     assert.ok(generalReply.includes("Premium Roofing"));
 
-    const drewFallback = getGracefulFallback("Hello", { isDrew: true, name: "Instant Roofing & Exteriors" });
+    const drewFallback = getGracefulFallback("Hello", { isDrew: true, name: "Instant Roofing & Exteriors", city: "Austin, TX" });
     assert.ok(drewFallback.includes("Instant Roofing") || drewFallback.includes("Drew Boy"));
+
+    const richardFallback = getGracefulFallback("Hello", { isRichard: true, name: "Paramount Roofing Inc.", city: "Houston, TX" });
+    assert.ok(richardFallback.includes("Paramount Roofing") || richardFallback.includes("Richard"));
 
     const otherAustinFallback = getGracefulFallback("Hello", { isDrew: false, name: "Apex Roofing", city: "Austin, TX" });
     assert.strictEqual(otherAustinFallback.includes("Drew Boy"), false);

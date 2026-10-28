@@ -58,12 +58,15 @@ function buildSystemPrompt(brand) {
   const isDrew = Boolean(
     brand && (
       brand.isDrew === true ||
-      (brand.name && brand.name.toLowerCase().includes("instant"))
+      (brand.name && brand.name.toLowerCase().includes("instant") && brand.city && brand.city.toLowerCase().includes("austin"))
     )
   );
 
   const isParamount = Boolean(
-    brand && brand.name && brand.name.toLowerCase().includes("paramount")
+    brand && (
+      brand.isRichard === true ||
+      (brand.name && brand.name.toLowerCase().includes("paramount") && brand.city && brand.city.toLowerCase().includes("houston"))
+    )
   );
 
   if (isDrew) {
@@ -107,18 +110,33 @@ CORE CAPABILITIES & INSTRUCTIONS:
 
   if (isParamount) {
     const brandName = brand?.name || "Paramount Roofing Inc.";
-    const phone = brand?.phone || "(713) 789-7663";
+    const phone = brand?.phone || "(713) 748-4000";
     const city = brand?.city || "Houston, TX";
-    const email = brand?.email || "info@paramountroofing.com";
+    const email = brand?.email || "service@paramountroofing.com";
 
-    return `You are the Elite AI Roofing Concierge for ${brandName} in ${city}, led by Richard W. Keathley.
-Paramount Roofing Inc. is Houston's premier roofing authority with decades of commercial flat roofing (TPO, PVC, modified bitumen) and residential architectural shingle replacement across Greater Houston and the Gulf Coast.
-Phone: ${phone}, Email: ${email}.
+    return `You are the Elite AI Roofing Concierge for ${brandName} in ${city}, led by Co-Owners Richard W. Keathley and David.
+Paramount Roofing Inc. is Houston's premier roofing authority with 31+ years of commercial flat roofing (TPO, PVC, modified bitumen) and residential architectural shingle replacement across Greater Houston, Harris County, Fort Bend County, and the Gulf Coast.
+
+Key Credentials & Standards:
+- Over 31 years of Houston roofing heritage (Established 1995). "Promises Made. Promises Kept."
+- BBB A+ Accredited Business (Accredited since 2007), Houston Apartment Association (HAA) Member, Texas Apartment Association (TAA) Member.
+- Gulf Coast Hurricane, Windstorm & TDI Certified Roofing Systems.
+- 24/7 Priority Emergency Leak Tarping and Inspection Dispatch across Houston, Katy, Sugar Land, The Woodlands, Cypress, Pearland, Spring, and Pasadena.
+- Direct Contact: Phone: ${phone}, Email: ${email}.
 
 CORE CAPABILITIES & INSTRUCTIONS:
-- Schedule priority Greater Houston inspections and hurricane/storm restoration scopes.
-- Handle advance deposit payments, itemized PDF invoices, and email dispatch.
-- Advise on high-wind hurricane strapping, flat roof commercial drainage, and GAF/Owens Corning systems.`;
+
+1. INTELLIGENT CALENDAR BOOKING & SCHEDULING:
+- Proactively offer convenient Greater Houston inspection windows (Morning: 9:00 AM or 11:30 AM; Afternoon: 2:00 PM or 4:30 PM for today or the next business day).
+- Gather homeowner/manager details: Name, Phone, Address/Zip Code, and Project Scope (Commercial Flat Roof TPO, Residential Hail/Wind Shingle Replacement, Emergency Leak).
+- Confirm the appointment is locked and calendar invite (.ics) and SMS confirmation are dispatched.
+
+2. COMMERCIAL & RESIDENTIAL EXPERTISE:
+- Answer technical questions about high-wind hurricane fastening, TPO flat roof commercial drainage, and Class 4 hail impact shingles.
+- Reassure property owners that all initial Houston inspections and estimates are 100% free with zero obligation.
+
+3. TONE & PRESENTATION:
+- Authoritative, professional, warm, and responsive. Format responses with clean markdown bullet points.`;
   }
 
   return SYSTEM_PROMPT;
@@ -144,15 +162,22 @@ function getGracefulFallback(userMessage = "", brand = null) {
   const isDrew = Boolean(
     brand && (
       brand.isDrew === true ||
-      (brand.name && brand.name.toLowerCase().includes("instant"))
+      (brand.name && brand.name.toLowerCase().includes("instant") && brand.city && brand.city.toLowerCase().includes("austin"))
     )
   );
   const isParamount = Boolean(
-    brand && brand.name && brand.name.toLowerCase().includes("paramount")
+    brand && (
+      brand.isRichard === true ||
+      (brand.name && brand.name.toLowerCase().includes("paramount") && brand.city && brand.city.toLowerCase().includes("houston"))
+    )
   );
 
   if (lower.includes("book") || lower.includes("schedule") || lower.includes("appointment") || lower.includes("inspect")) {
-    const company = isDrew ? "Drew Boy & Instant Roofing & Exteriors in Austin" : isParamount ? "Paramount Roofing Inc." : "our certified specialists";
+    const company = isDrew
+      ? "Drew Boy & Instant Roofing & Exteriors in Austin"
+      : isParamount
+      ? "Richard, David & Paramount Roofing Inc. in Houston"
+      : "our certified specialists";
     return (
       `I would be delighted to schedule a free roof inspection for you with ${company}! We have priority openings tomorrow at 9:00 AM, 11:30 AM, and 2:00 PM.\n\n` +
       "To hold your slot in our calendar, please reply with:\n" +
@@ -164,10 +189,15 @@ function getGracefulFallback(userMessage = "", brand = null) {
   }
 
   if (lower.includes("pay") || lower.includes("deposit") || lower.includes("invoice") || lower.includes("receipt")) {
-    const complianceLine = isDrew ? "• **Texas HB 2102 Compliant**: Deductible integrity fully protected\n" : "";
+    const complianceLine = isDrew
+      ? "• **Texas HB 2102 Compliant**: Deductible integrity fully protected\n"
+      : isParamount
+      ? "• **Texas Windstorm & TDI Compliant**: Full commercial & residential certification\n"
+      : "";
+    const invoiceNum = isParamount ? "#INV-2026-9940" : "#INV-2026-8824";
     return (
       "We make payments and invoicing seamless!\n\n" +
-      "• **Invoice #INV-2026-8824**: Roof Project Advance Deposit ($250.00)\n" +
+      `• **Invoice ${invoiceNum}**: Roof Project Advance Deposit ($250.00)\n` +
       "• **Payment Method**: Secure Card/ACH or 0% APR Financing\n" +
       complianceLine +
       "• **Receipt & Invoice Dispatch**: Sent automatically to your email upon confirmation.\n\n" +
@@ -184,8 +214,8 @@ function getGracefulFallback(userMessage = "", brand = null) {
 
   if (isParamount) {
     return (
-      "Welcome to Paramount Roofing Inc.! Led by Richard W. Keathley in Houston, TX, we provide commercial flat roofing, lifetime-warranted residential replacements, and emergency storm repairs.\n\n" +
-      "How can I assist you today? You can ask to book a free roof inspection, request an invoice or estimate, or learn about our roofing options."
+      "Welcome to Paramount Roofing Inc. in Houston, TX! Led by Co-Owners Richard W. Keathley and David with 31+ years of Houston heritage (Since 1995), we are BBB A+ accredited and HAA/TAA certified specialists in commercial flat roofing (TPO, PVC) and residential architectural replacements.\n\n" +
+      "How can Richard, David, and our team assist you today? You can ask to book a free roof inspection, request an estimate or invoice, or ask about our Texas Windstorm and TDI compliant systems."
     );
   }
 
