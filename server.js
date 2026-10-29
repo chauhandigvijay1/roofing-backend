@@ -69,6 +69,13 @@ function buildSystemPrompt(brand) {
     )
   );
 
+  const isJim = Boolean(
+    brand && (
+      brand.isJim === true ||
+      (brand.name && brand.name.toLowerCase().includes("ready") && brand.city && brand.city.toLowerCase().includes("jacksonville"))
+    )
+  );
+
   if (isDrew) {
     const brandName = brand?.name || "Instant Roofing & Exteriors";
     const phone = brand?.phone || "(512) 888-9999";
@@ -139,6 +146,43 @@ CORE CAPABILITIES & INSTRUCTIONS:
 - Authoritative, professional, warm, and responsive. Format responses with clean markdown bullet points.`;
   }
 
+  if (isJim) {
+    const brandName = brand?.name || "Ready Roofing, LLC";
+    const phone = brand?.phone || "(904) 404-9849";
+    const city = brand?.city || "Jacksonville, FL";
+    const email = brand?.email || "jvjessup@gmail.com";
+
+    return `You are the Elite AI Roofing Concierge for ${brandName} in ${city}, led by Owner & Operator Jim Jessup (Florida DBPR Lic. # RC29027754).
+Ready Roofing is Northeast Florida's premier roofing contractor serving Duval, St. Johns, Clay, and Flagler counties (Jacksonville, Orange Park, Ponte Vedra Beach, St. Augustine, and Palm Coast). "We Nailed It!"
+
+Key Credentials & Standards:
+- Over 20 years of construction and development heritage led by Jim Jessup (originally from Fayetteville, NC).
+- Florida DBPR Registered Roofing Contractor: Lic. # RC29027754.
+- 4.9/5.0 Star Rating across Google Maps and verified reviews.
+- Specialized in Hurricane Ian/Nicole storm restorations, Worthouse Metal Tile, 140+ MPH hurricane-rated architectural shingles, and Commercial TPO / Silicone roof coatings.
+- Official Florida Wind Mitigation Inspections: Helping Florida homeowners save $500 to $1,200 per year on homeowners insurance premiums through verified hurricane clips and secondary water resistance.
+- $0 Down / Fixed-Rate Florida Storm Financing programs.
+- Direct Contact: Phone: ${phone}, Email: ${email}, Office: 5105 Philips Hwy, Ste 205, Jacksonville, FL.
+
+CORE CAPABILITIES & INSTRUCTIONS:
+
+1. INTELLIGENT APPOINTMENT SCHEDULING:
+- Proactively offer convenient Northeast Florida inspection windows (Morning: 9:00 AM or 11:30 AM; Afternoon: 2:00 PM or 4:30 PM for today or the next business day).
+- Gather property details: Name, Phone, Address/Zip Code, and Project Scope (Hurricane Wind Damage, Shingle Replacement, Metal Tile, Commercial TPO, Wind Mitigation Inspection).
+- Confirm the appointment is locked and calendar invite (.ics) and SMS confirmation are dispatched.
+
+2. FLORIDA BUILDING SCIENCE & INSURANCE GUIDANCE:
+- Answer questions on Florida Building Code (High-Velocity Hurricane requirements, 140+ MPH fastening).
+- Explain Wind Mitigation insurance premium discounts clearly to homeowners.
+- Reassure property owners that all inspections and storm damage assessments are 100% free with zero obligation.
+
+3. EMERGENCY DISPATCH:
+- For active structural roof leaks or emergency tarping needs, direct the customer to call Jim Jessup immediately at ${phone}.
+
+4. TONE & PRESENTATION:
+- Authoritative, friendly, highly professional, and responsive. Format responses with clean markdown bullet points.`;
+  }
+
   return SYSTEM_PROMPT;
 }
 
@@ -172,11 +216,20 @@ function getGracefulFallback(userMessage = "", brand = null) {
     )
   );
 
+  const isJim = Boolean(
+    brand && (
+      brand.isJim === true ||
+      (brand.name && brand.name.toLowerCase().includes("ready") && brand.city && brand.city.toLowerCase().includes("jacksonville"))
+    )
+  );
+
   if (lower.includes("book") || lower.includes("schedule") || lower.includes("appointment") || lower.includes("inspect")) {
     const company = isDrew
       ? "Drew Boy & Instant Roofing & Exteriors in Austin"
       : isParamount
       ? "Richard, David & Paramount Roofing Inc. in Houston"
+      : isJim
+      ? "Jim Jessup & Ready Roofing in Jacksonville"
       : "our certified specialists";
     return (
       `I would be delighted to schedule a free roof inspection for you with ${company}! We have priority openings tomorrow at 9:00 AM, 11:30 AM, and 2:00 PM.\n\n` +
@@ -193,8 +246,10 @@ function getGracefulFallback(userMessage = "", brand = null) {
       ? "• **Texas HB 2102 Compliant**: Deductible integrity fully protected\n"
       : isParamount
       ? "• **Texas Windstorm & TDI Compliant**: Full commercial & residential certification\n"
+      : isJim
+      ? "• **Florida DBPR Lic. # RC29027754**: Florida Wind Mitigation Certified\n"
       : "";
-    const invoiceNum = isParamount ? "#INV-2026-9940" : "#INV-2026-8824";
+    const invoiceNum = isParamount ? "#INV-2026-9940" : isJim ? "#INV-2026-3044" : "#INV-2026-8824";
     return (
       "We make payments and invoicing seamless!\n\n" +
       `• **Invoice ${invoiceNum}**: Roof Project Advance Deposit ($250.00)\n` +
@@ -216,6 +271,13 @@ function getGracefulFallback(userMessage = "", brand = null) {
     return (
       "Welcome to Paramount Roofing Inc. in Houston, TX! Led by Co-Owners Richard W. Keathley and David with 31+ years of Houston heritage (Since 1995), we are BBB A+ accredited and HAA/TAA certified specialists in commercial flat roofing (TPO, PVC) and residential architectural replacements.\n\n" +
       "How can Richard, David, and our team assist you today? You can ask to book a free roof inspection, request an estimate or invoice, or ask about our Texas Windstorm and TDI compliant systems."
+    );
+  }
+
+  if (isJim) {
+    return (
+      "Welcome to Ready Roofing, LLC in Jacksonville, FL! Led by Owner & Operator Jim Jessup (Florida DBPR Lic. # RC29027754) with 20+ years of construction heritage, we specialize in 140+ MPH hurricane-tested shingles, Worthouse metal tile, commercial TPO, and Florida Wind Mitigation inspections.\n\n" +
+      "How can Jim and our team assist you today? You can ask to book a free roof inspection, calculate your Wind Mitigation insurance savings, or request emergency leak dispatch."
     );
   }
 

@@ -205,6 +205,34 @@ describe("Roofing Backend API Tests", () => {
     });
     assert.strictEqual(apexHoustonPrompt.includes("Richard W. Keathley"), false);
 
+    // Jim Jessup in Jacksonville (Ready Roofing)
+    const jimPrompt = buildSystemPrompt({
+      name: "Ready Roofing, LLC",
+      city: "Jacksonville, FL",
+      isJim: true,
+    });
+    assert.ok(jimPrompt.includes("Ready Roofing"));
+    assert.ok(jimPrompt.includes("Jim Jessup"));
+    assert.ok(jimPrompt.includes("RC29027754"));
+    assert.ok(jimPrompt.includes("Wind Mitigation"));
+    assert.ok(jimPrompt.includes("We Nailed It!"));
+
+    // Ready Roofing outside Jacksonville should NOT trigger Jim prompt (dual condition check)
+    const readyMiamiPrompt = buildSystemPrompt({
+      name: "Ready Roofing",
+      city: "Miami, FL",
+      isJim: false,
+    });
+    assert.strictEqual(readyMiamiPrompt.includes("Jim Jessup"), false);
+
+    // Apex in Jacksonville should NOT trigger Jim prompt
+    const apexJaxPrompt = buildSystemPrompt({
+      name: "Apex Roofing",
+      city: "Jacksonville, FL",
+      isJim: false,
+    });
+    assert.strictEqual(apexJaxPrompt.includes("Jim Jessup"), false);
+
     const genericPrompt = buildSystemPrompt(null);
     assert.strictEqual(genericPrompt, SYSTEM_PROMPT);
   });
@@ -225,7 +253,16 @@ describe("Roofing Backend API Tests", () => {
     const richardFallback = getGracefulFallback("Hello", { isRichard: true, name: "Paramount Roofing Inc.", city: "Houston, TX" });
     assert.ok(richardFallback.includes("Paramount Roofing") || richardFallback.includes("Richard"));
 
+    const jimFallback = getGracefulFallback("Hello", { isJim: true, name: "Ready Roofing, LLC", city: "Jacksonville, FL" });
+    assert.ok(jimFallback.includes("Ready Roofing") || jimFallback.includes("Jim Jessup"));
+
+    const jimBooking = getGracefulFallback("I want to book an inspection", { isJim: true, name: "Ready Roofing, LLC", city: "Jacksonville, FL" });
+    assert.ok(jimBooking.includes("Jim Jessup & Ready Roofing in Jacksonville"));
+
     const otherAustinFallback = getGracefulFallback("Hello", { isDrew: false, name: "Apex Roofing", city: "Austin, TX" });
     assert.strictEqual(otherAustinFallback.includes("Drew Boy"), false);
+
+    const otherJaxFallback = getGracefulFallback("Hello", { isJim: false, name: "Apex Roofing", city: "Jacksonville, FL" });
+    assert.strictEqual(otherJaxFallback.includes("Jim Jessup"), false);
   });
 });
