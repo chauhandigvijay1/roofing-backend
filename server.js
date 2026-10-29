@@ -52,6 +52,8 @@ CORE CAPABILITIES & INSTRUCTIONS:
 4. TONE, STYLE & PRESENTATION:
 - Authoritative, polished, warm, and executive.
 - Format responses cleanly using markdown bullet points, bold headers, and concise sections.
+- STRICT FORMATTING: Do NOT output raw ASCII pipe tables (|---|). Always use bullet points and bold labels for comparisons.
+- PRICING REALISM: Typical residential roof replacements range between $8,500 and $16,000 for architectural shingles ($4.50 - $6.50/sq.ft.), and $16,000 to $25,000 for metal tile. Never quote inflated commercial six-figure sums ($100k+) for regular residential homes.
 - Keep responses readable and high-impact. Never sound like a basic generic bot. Deliver a world-class experience.`;
 
 function buildSystemPrompt(brand) {
@@ -112,7 +114,9 @@ CORE CAPABILITIES & INSTRUCTIONS:
 - Deliver authoritative advice on Austin's climate challenges (severe spring hail, extreme summer radiant attic heat, wind storms). Emphasize Drew Boy's building science approach, GAF Timberline HDZ systems, and free forensic roof inspections.
 
 4. TONE & PRESENTATION:
-- Grounded in building science, authoritative, polished, responsive, and executive. Use markdown formatting.`;
+- Grounded in building science, authoritative, polished, responsive, and executive.
+- STRICT FORMATTING: Do NOT output raw ASCII pipe tables (|---|). Always use bold bullet points and clear sections.
+- PRICING REALISM: Typical Austin residential replacements range from $8,500 to $16,000 for GAF Timberline HDZ architectural shingles ($4.50 - $6.50/sq.ft.), and $16,000 to $25,000 for standing seam metal. Never quote six-figure sums for standard residential roofs.`;
   }
 
   if (isParamount) {
@@ -143,7 +147,9 @@ CORE CAPABILITIES & INSTRUCTIONS:
 - Reassure property owners that all initial Houston inspections and estimates are 100% free with zero obligation.
 
 3. TONE & PRESENTATION:
-- Authoritative, professional, warm, and responsive. Format responses with clean markdown bullet points.`;
+- Authoritative, professional, warm, and responsive.
+- STRICT FORMATTING: Do NOT output raw ASCII pipe tables (|---|). Always use bold bullet points and clear sections.
+- PRICING REALISM: Typical Greater Houston residential shingle replacements range from $8,500 to $15,500; commercial TPO projects vary based on square footage ($5.50 - $8.50/sq.ft.). Never quote six-figure sums for standard residential replacements.`;
   }
 
   if (isJim) {
@@ -173,14 +179,16 @@ CORE CAPABILITIES & INSTRUCTIONS:
 
 2. FLORIDA BUILDING SCIENCE & INSURANCE GUIDANCE:
 - Answer questions on Florida Building Code (High-Velocity Hurricane requirements, 140+ MPH fastening).
-- Explain Wind Mitigation insurance premium discounts clearly to homeowners.
+- Explain Wind Mitigation insurance premium discounts clearly to homeowners ($500 - $1,200/year savings).
 - Reassure property owners that all inspections and storm damage assessments are 100% free with zero obligation.
 
 3. EMERGENCY DISPATCH:
 - For active structural roof leaks or emergency tarping needs, direct the customer to call Jim Jessup immediately at ${phone}.
 
 4. TONE & PRESENTATION:
-- Authoritative, friendly, highly professional, and responsive. Format responses with clean markdown bullet points.`;
+- Authoritative, friendly, highly professional, and responsive.
+- STRICT FORMATTING: Do NOT output raw ASCII pipe tables (|---|). Always use clean bold bullet points and clear sections.
+- PRICING REALISM: Typical Northeast Florida residential replacements range from $8,500 to $15,000 for 140+ MPH architectural shingles ($4.50 - $6.50/sq.ft.), and $16,000 to $24,000 for Worthouse Metal Tile. Wind Mitigation inspections run $95 - $150 (saving $500 - $1,200/yr on insurance). Never quote inflated six-figure numbers ($100k+) for standard residential roofs.`;
   }
 
   return SYSTEM_PROMPT;
