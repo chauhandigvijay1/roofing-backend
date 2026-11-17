@@ -1,13 +1,23 @@
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert");
 const http = require("node:http");
-const { app, PRIMARY_MODEL, CANDIDATE_MODELS, SYSTEM_PROMPT, buildSystemPrompt, getGracefulFallback } = require("../server");
+const {
+  app,
+  PRIMARY_MODEL,
+  CANDIDATE_MODELS,
+  SYSTEM_PROMPT,
+  buildSystemPrompt,
+  getGracefulFallback,
+  enrichDomain,
+  ENRICH_CACHE,
+} = require("../server");
 
-describe("Roofing Backend API Tests", () => {
+describe("Roofing Backend Universal API Tests", () => {
   let server;
   let baseUrl;
 
   before(async () => {
+    process.env.NODE_ENV = "test";
     await new Promise((resolve) => {
       server = app.listen(0, () => {
         const port = server.address().port;
@@ -80,20 +90,22 @@ describe("Roofing Backend API Tests", () => {
     assert.ok(data.model);
   });
 
-  test("POST /api/chat accepts brand object and responds for Drew Boy", async () => {
+  test("POST /api/chat accepts universal dynamic brand object", async () => {
     const res = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: "Tell me about your building science inspection in Austin",
+        message: "What roofing materials do you recommend?",
         history: [],
         brand: {
-          name: "Instant Roofing & Exteriors",
-          city: "Austin, TX",
-          phone: "(512) 888-9999",
-          email: "support@instantrfg.com",
-          isDrew: true,
-          isRichard: false,
+          name: "Worley Byrd Roofing & Restoration",
+          city: "Dallas, TX",
+          phone: "(214) 555-8822",
+          email: "info@worleybyrd.com",
+          tagline: "North Texas Roofing Masters",
+          founderName: "Marcus Byrd",
+          founderTitle: "Managing Principal",
+          isCommercial: false,
         },
       }),
     });
@@ -103,166 +115,113 @@ describe("Roofing Backend API Tests", () => {
     assert.ok(data.reply.length > 20);
   });
 
-  test("POST /api/chat accepts brand object and responds for Richard & David", async () => {
+  test("POST /api/chat enforces 10-exchange session ceiling with CONVERSION_HANDOFF", async () => {
+    // Generate 10 prior user exchanges in history
+    const history = [];
+    for (let i = 1; i <= 10; i++) {
+      history.push({ role: "user", content: `Question ${i}` });
+      history.push({ role: "assistant", content: `Answer ${i}` });
+    }
+
     const res = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: "Tell me about your commercial flat roof inspection in Houston",
-        history: [],
+        message: "Question 11 - Can you tell me more?",
+        history,
         brand: {
-          name: "Paramount Roofing Inc.",
-          city: "Houston, TX",
-          phone: "(713) 748-4000",
-          email: "service@paramountroofing.com",
-          isDrew: false,
-          isRichard: true,
+          name: "Apex Roofing",
+          city: "Atlanta, GA",
+          phone: "(404) 555-0199",
         },
       }),
     });
     assert.strictEqual(res.status, 200);
     const data = await res.json();
-    assert.ok(typeof data.reply === "string");
-    assert.ok(data.reply.length > 20);
+    assert.strictEqual(data.type, "CONVERSION_HANDOFF");
+    assert.ok(data.reply.includes("priority scheduling"));
   });
 
-  test("POST /api/chat handles booking and calendar inquiries", async () => {
-    const res = await fetch(`${baseUrl}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: "Can I book a roof inspection slot for tomorrow afternoon?",
-        history: [],
-      }),
-    });
+  test("GET /api/enrich requires domain parameter", async () => {
+    const res = await fetch(`${baseUrl}/api/enrich`);
+    assert.strictEqual(res.status, 400);
+    const data = await res.json();
+    assert.ok(data.error);
+  });
+
+  test("GET /api/enrich returns enriched data with caching", async () => {
+    const res = await fetch(`${baseUrl}/api/enrich?domain=worleybyrdroofing.com`);
     assert.strictEqual(res.status, 200);
     const data = await res.json();
-    assert.ok(typeof data.reply === "string");
-    assert.ok(data.reply.length > 50);
+    assert.strictEqual(data.domain, "worleybyrdroofing.com");
+    assert.ok(typeof data.logo === "string");
+    assert.ok(typeof data.tagline === "string");
+    assert.ok(Array.isArray(data.services));
+    assert.ok(typeof data.rating === "number");
+    assert.ok(typeof data.reviewsCount === "number");
+
+    // Second call should return from memory cache immediately
+    const resCached = await fetch(`${baseUrl}/api/enrich?domain=worleybyrdroofing.com`);
+    assert.strictEqual(resCached.status, 200);
+    const cachedData = await resCached.json();
+    assert.strictEqual(cachedData.domain, "worleybyrdroofing.com");
   });
 
-  test("POST /api/chat handles payment and invoice inquiries", async () => {
-    const res = await fetch(`${baseUrl}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: "I want to make an advance deposit payment. Can you generate an invoice?",
-        history: [],
-      }),
-    });
-    assert.strictEqual(res.status, 200);
-    const data = await res.json();
-    assert.ok(typeof data.reply === "string");
-    assert.ok(data.reply.length > 50);
-  });
-
-  test("buildSystemPrompt generates tailored system prompt based on brand", () => {
-    const drewPrompt = buildSystemPrompt({
-      name: "Instant Roofing & Exteriors",
-      city: "Austin, TX",
-      isDrew: true,
-    });
-    assert.ok(drewPrompt.includes("Drew Boy"));
-    assert.ok(drewPrompt.includes("Building Science"));
-    assert.ok(drewPrompt.includes("Texas HB 2102"));
-    assert.ok(drewPrompt.includes("GAF Certified Plus"));
-    assert.ok(drewPrompt.includes("Housecall Pro"));
-
-    // Other roofers in Austin should NOT get Drew Boy prompt
-    const otherAustinPrompt = buildSystemPrompt({
-      name: "Apex Roofing",
-      city: "Austin, TX",
-      isDrew: false,
-    });
-    assert.strictEqual(otherAustinPrompt.includes("Drew Boy"), false);
-
-    // Richard & David in Houston
-    const paramountPrompt = buildSystemPrompt({
-      name: "Paramount Roofing Inc.",
-      city: "Houston, TX",
-      isRichard: true,
-    });
-    assert.ok(paramountPrompt.includes("Paramount Roofing"));
-    assert.ok(paramountPrompt.includes("Richard W. Keathley and David"));
-    assert.ok(paramountPrompt.includes("Houston"));
-    assert.ok(paramountPrompt.includes("31+ years"));
-    assert.ok(paramountPrompt.includes("BBB A+"));
-    assert.ok(paramountPrompt.includes("Houston Apartment Association"));
-
-    // Paramount outside Houston should NOT trigger Richard prompt (dual condition check)
-    const paramountDallasPrompt = buildSystemPrompt({
-      name: "Paramount Roofing Inc.",
+  test("buildSystemPrompt dynamically generates custom prompt without legacy client hardcoding", () => {
+    // Test 1: Texas roofer
+    const texasPrompt = buildSystemPrompt({
+      name: "Summit Commercial Roofing",
       city: "Dallas, TX",
-      isRichard: false,
+      phone: "(214) 888-0000",
+      isCommercial: true,
+      founderName: "David Vance",
+      founderTitle: "Chief Operations Officer",
     });
-    assert.strictEqual(paramountDallasPrompt.includes("Richard W. Keathley"), false);
+    assert.ok(texasPrompt.includes("Summit Commercial Roofing"));
+    assert.ok(texasPrompt.includes("Dallas, TX"));
+    assert.ok(texasPrompt.includes("Texas HB 2102"));
+    assert.ok(texasPrompt.includes("David Vance"));
+    assert.ok(texasPrompt.includes("Commercial Flat Roofing Authority"));
+    assert.strictEqual(texasPrompt.includes("Drew Boy"), false);
+    assert.strictEqual(texasPrompt.includes("Jim Jessup"), false);
+    assert.strictEqual(texasPrompt.includes("Richard W. Keathley"), false);
 
-    // Apex in Houston should NOT trigger Richard prompt
-    const apexHoustonPrompt = buildSystemPrompt({
-      name: "Apex Roofing",
-      city: "Houston, TX",
-      isRichard: false,
+    // Test 2: Florida roofer
+    const flPrompt = buildSystemPrompt({
+      name: "Coastal Storm Roofing",
+      city: "Tampa, FL",
+      phone: "(813) 444-2211",
+      licenseNumber: "CCC1331890",
     });
-    assert.strictEqual(apexHoustonPrompt.includes("Richard W. Keathley"), false);
+    assert.ok(flPrompt.includes("Coastal Storm Roofing"));
+    assert.ok(flPrompt.includes("Tampa, FL"));
+    assert.ok(flPrompt.includes("Florida Wind Mitigation"));
+    assert.ok(flPrompt.includes("CCC1331890"));
+    assert.strictEqual(flPrompt.includes("Drew Boy"), false);
+    assert.strictEqual(flPrompt.includes("Jim Jessup"), false);
 
-    // Jim Jessup in Jacksonville (Ready Roofing)
-    const jimPrompt = buildSystemPrompt({
-      name: "Ready Roofing, LLC",
-      city: "Jacksonville, FL",
-      isJim: true,
-    });
-    assert.ok(jimPrompt.includes("Ready Roofing"));
-    assert.ok(jimPrompt.includes("Jim Jessup"));
-    assert.ok(jimPrompt.includes("RC29027754"));
-    assert.ok(jimPrompt.includes("Wind Mitigation"));
-    assert.ok(jimPrompt.includes("We Nailed It!"));
-
-    // Ready Roofing outside Jacksonville should NOT trigger Jim prompt (dual condition check)
-    const readyMiamiPrompt = buildSystemPrompt({
-      name: "Ready Roofing",
-      city: "Miami, FL",
-      isJim: false,
-    });
-    assert.strictEqual(readyMiamiPrompt.includes("Jim Jessup"), false);
-
-    // Apex in Jacksonville should NOT trigger Jim prompt
-    const apexJaxPrompt = buildSystemPrompt({
-      name: "Apex Roofing",
-      city: "Jacksonville, FL",
-      isJim: false,
-    });
-    assert.strictEqual(apexJaxPrompt.includes("Jim Jessup"), false);
-
-    const genericPrompt = buildSystemPrompt(null);
-    assert.strictEqual(genericPrompt, SYSTEM_PROMPT);
+    // Test 3: Null brand fallback
+    const generic = buildSystemPrompt(null);
+    assert.strictEqual(generic, SYSTEM_PROMPT);
   });
 
-  test("getGracefulFallback provides appropriate offline responses", () => {
-    const bookReply = getGracefulFallback("I want to book an appointment");
-    assert.ok(bookReply.includes("inspection") || bookReply.includes("schedule"));
+  test("getGracefulFallback provides universal responses for any contractor", () => {
+    const brand = {
+      name: "Pinnacle Roofing Systems",
+      city: "Denver, CO",
+      phone: "(303) 777-9911",
+    };
 
-    const payReply = getGracefulFallback("How do I pay deposit and get invoice?");
-    assert.ok(payReply.includes("Invoice") || payReply.includes("Deposit"));
+    const bookReply = getGracefulFallback("I want to book an inspection", brand);
+    assert.ok(bookReply.includes("Pinnacle Roofing Systems"));
+    assert.ok(bookReply.includes("Denver, CO"));
+    assert.ok(bookReply.includes("(303) 777-9911"));
 
-    const generalReply = getGracefulFallback("Hello");
-    assert.ok(generalReply.includes("Premium Roofing"));
-
-    const drewFallback = getGracefulFallback("Hello", { isDrew: true, name: "Instant Roofing & Exteriors", city: "Austin, TX" });
-    assert.ok(drewFallback.includes("Instant Roofing") || drewFallback.includes("Drew Boy"));
-
-    const richardFallback = getGracefulFallback("Hello", { isRichard: true, name: "Paramount Roofing Inc.", city: "Houston, TX" });
-    assert.ok(richardFallback.includes("Paramount Roofing") || richardFallback.includes("Richard"));
-
-    const jimFallback = getGracefulFallback("Hello", { isJim: true, name: "Ready Roofing, LLC", city: "Jacksonville, FL" });
-    assert.ok(jimFallback.includes("Ready Roofing") || jimFallback.includes("Jim Jessup"));
-
-    const jimBooking = getGracefulFallback("I want to book an inspection", { isJim: true, name: "Ready Roofing, LLC", city: "Jacksonville, FL" });
-    assert.ok(jimBooking.includes("Jim Jessup & Ready Roofing in Jacksonville"));
-
-    const otherAustinFallback = getGracefulFallback("Hello", { isDrew: false, name: "Apex Roofing", city: "Austin, TX" });
-    assert.strictEqual(otherAustinFallback.includes("Drew Boy"), false);
-
-    const otherJaxFallback = getGracefulFallback("Hello", { isJim: false, name: "Apex Roofing", city: "Jacksonville, FL" });
-    assert.strictEqual(otherJaxFallback.includes("Jim Jessup"), false);
+    const generalReply = getGracefulFallback("Hello", brand);
+    assert.ok(generalReply.includes("Pinnacle Roofing Systems"));
+    assert.ok(generalReply.includes("Denver, CO"));
+    assert.strictEqual(generalReply.includes("Jim Jessup"), false);
+    assert.strictEqual(generalReply.includes("Drew Boy"), false);
+    assert.strictEqual(generalReply.includes("Richard"), false);
   });
 });
