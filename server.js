@@ -529,13 +529,26 @@ async function enrichDomain(rawDomain) {
     const bannedImgKeywords = [
       "logo", "icon", "svg", "pixel", "bbb", "badge", "award",
       "certified", "warranty", "wrnty", "clipart", "youtube",
-      "wpconsent", "map", "areas-of-service", "review", "star", "favicon"
+      "wpconsent", "map", "areas-of-service", "review", "star", "favicon",
+      "chamber", "cai", "trans", "facebook", "twitter", "instagram", "linkedin",
+      "tiktok", "pinterest", "social", "financing", "learnmore", "banner", "lockup",
+      "member", "association", "accreditation", "seal", "button", "graphic", "sponsor",
+      "license", "partner", "gaf", "owens", "certainteed", "tamko", "iko", "atlas",
+      "malarkey", "carlisle", "firestone", "versico", "angie", "homeadvisor",
+      "guildquality", "houzz", "yelp", "google-review", "header", "footer", "hero-bg",
+      "pattern", "divider", "bg-", "background", "arrow", "check", "loader", "spinner"
     ];
     const attrRegex = /(?:src|data-src|data-orig-src|data-lazy-src)=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/gi;
     for (const match of html.matchAll(attrRegex)) {
       const rawSrc = match[1].split("?")[0];
       const lower = rawSrc.toLowerCase();
       if (bannedImgKeywords.some((b) => lower.includes(b))) continue;
+      // Skip small thumbnail dimensions embedded in filename
+      if (/-\d{2,3}x\d{2,3}\.(?:jpg|jpeg|png|webp)$/i.test(rawSrc)) continue;
+      // If PNG, only keep if filename explicitly indicates a roof / drone project
+      if (lower.endsWith(".png") && !/roof|shingle|metal|tpo|drone|project|dji|commercial|residential|house|decking/i.test(lower)) {
+        continue;
+      }
       if (
         lower.includes("uploads") ||
         lower.includes("gallery") ||
@@ -580,6 +593,7 @@ async function enrichDomain(rawDomain) {
             headers: {
               "User-Agent":
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+              Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             },
           });
           if (galRes.ok) {
@@ -588,6 +602,10 @@ async function enrichDomain(rawDomain) {
               const rawSrc = match[1].split("?")[0];
               const lower = rawSrc.toLowerCase();
               if (bannedImgKeywords.some((b) => lower.includes(b))) continue;
+              if (/-\d{2,3}x\d{2,3}\.(?:jpg|jpeg|png|webp)$/i.test(rawSrc)) continue;
+              if (lower.endsWith(".png") && !/roof|shingle|metal|tpo|drone|project|dji|commercial|residential|house|decking/i.test(lower)) {
+                continue;
+              }
               if (
                 lower.includes("uploads") ||
                 lower.includes("gallery") ||
