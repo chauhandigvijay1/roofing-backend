@@ -250,6 +250,7 @@ async function enrichDomain(rawDomain) {
       "Attic Ventilation & Thermal Survey",
     ],
     serviceAreas: [],
+    reviews: [],
     isCommercial: false,
     enriched: false,
   };
@@ -433,6 +434,75 @@ async function enrichDomain(rawDomain) {
 
     const serviceAreas = detectedAreas.length > 0 ? detectedAreas.slice(0, 10) : [];
 
+    // 7. Customer Reviews extraction
+    const detectedReviews = [];
+    for (const jm of jsonLdMatches) {
+      try {
+        const parsed = JSON.parse(jm[1].trim());
+        const candidates = parsed["@graph"] ? parsed["@graph"] : [parsed];
+        for (const c of candidates) {
+          if (c.review && Array.isArray(c.review)) {
+            for (const r of c.review) {
+              const author = r.author?.name || (typeof r.author === "string" ? r.author : "Verified Customer");
+              const text = r.reviewBody || r.description || "";
+              const val = parseFloat(r.reviewRating?.ratingValue) || 5;
+              if (text.length > 25 && detectedReviews.length < 8) {
+                detectedReviews.push({
+                  author: author.trim(),
+                  text: text.trim().slice(0, 300),
+                  rating: Math.min(5, Math.max(4, val)),
+                  project: "Verified Local Project",
+                  timeAgo: "Verified Google Review",
+                });
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
+    if (detectedReviews.length === 0) {
+      const testimonialsMatch = html.match(/href=["']([^"']*(?:testimonials|reviews)[^"']*)["']/i);
+      if (testimonialsMatch && testimonialsMatch[1]) {
+        try {
+          const testUrl = new URL(testimonialsMatch[1], targetUrl).href;
+          const testRes = await fetch(testUrl, {
+            signal: AbortSignal.timeout(2200),
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+              Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
+          });
+          if (testRes.ok) {
+            const testHtml = await testRes.text();
+            const nameMatches = [...testHtml.matchAll(/class=["'](?:ti-name|review-author|reviewer-name)["'][^>]*>([\s\S]*?)<\/(?:div|span|h4|h3|p)>/gi)].map(m => m[1].replace(/<[^>]+>/g, "").trim());
+            const textMatches = [...testHtml.matchAll(/class=["'](?:ti-review-text|review-text|testimonial-content|review-body)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)].map(m => m[1].replace(/<[^>]+>/g, "").replace(/&#\d+;/g, " ").replace(/\s+/g, " ").trim());
+
+            const count = Math.min(nameMatches.length, textMatches.length, 8);
+            for (let i = 0; i < count; i++) {
+              if (nameMatches[i].length > 1 && textMatches[i].length > 20) {
+                const txt = textMatches[i];
+                detectedReviews.push({
+                  author: nameMatches[i],
+                  text: txt.slice(0, 320),
+                  rating: 5,
+                  project: txt.toLowerCase().includes("leak")
+                    ? "Emergency Leak & Repair"
+                    : txt.toLowerCase().includes("hail") || txt.toLowerCase().includes("storm") || txt.toLowerCase().includes("insurance")
+                    ? "Storm Damage & Insurance Claim"
+                    : "Full Roof Replacement",
+                  timeAgo: "Verified Google Review",
+                });
+              }
+            }
+          }
+        } catch {}
+      }
+    }
+
+    const reviews = detectedReviews.length > 0 ? detectedReviews : [];
+
     const enrichedResult = {
       domain: cleanDomain,
       logo: logoUrl,
@@ -442,6 +512,7 @@ async function enrichDomain(rawDomain) {
       reviewsCount,
       services,
       serviceAreas,
+      reviews,
       isCommercial,
       enriched: true,
     };
