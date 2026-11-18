@@ -7,16 +7,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PRIMARY_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const PRIMARY_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
 
 // Ordered list of candidate models: primary requested model first, followed by active free-tier fallbacks
 const CANDIDATE_MODELS = Array.from(
   new Set([
     PRIMARY_MODEL,
+    "llama-3.1-8b-instant",
     "llama-3.3-70b-versatile",
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
-    "qwen/qwen3.8-27b",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
   ])
 );
 
@@ -251,13 +251,15 @@ async function enrichDomain(rawDomain) {
     ],
     serviceAreas: [],
     reviews: [],
+    galleryImages: [],
+    structuredServices: [],
     isCommercial: false,
     enriched: false,
   };
 
   const targetUrl = `https://${cleanDomain}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3500);
+  const timeoutId = setTimeout(() => controller.abort(), 6500);
 
   try {
     const res = await fetch(targetUrl, {
@@ -357,7 +359,7 @@ async function enrichDomain(rawDomain) {
     // 4. Rating & Reviews
     let rating = 4.9;
     let reviewsCount = 42;
-    const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+    const jsonLdMatches = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
     for (const jm of jsonLdMatches) {
       try {
         const parsed = JSON.parse(jm[1].trim());
@@ -467,7 +469,7 @@ async function enrichDomain(rawDomain) {
         try {
           const testUrl = new URL(testimonialsMatch[1], targetUrl).href;
           const testRes = await fetch(testUrl, {
-            signal: AbortSignal.timeout(2200),
+            signal: AbortSignal.timeout(4500),
             headers: {
               "User-Agent":
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -503,6 +505,113 @@ async function enrichDomain(rawDomain) {
 
     const reviews = detectedReviews.length > 0 ? detectedReviews : [];
 
+    // 8. Contractor Project & Gallery Images extraction
+    const detectedImages = [];
+    const bannedImgKeywords = [
+      "logo", "icon", "svg", "pixel", "bbb", "badge", "award",
+      "certified", "warranty", "wrnty", "clipart", "youtube",
+      "wpconsent", "map", "areas-of-service", "review", "star", "favicon"
+    ];
+    const attrRegex = /(?:src|data-src|data-orig-src|data-lazy-src)=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/gi;
+    for (const match of html.matchAll(attrRegex)) {
+      const rawSrc = match[1].split("?")[0];
+      const lower = rawSrc.toLowerCase();
+      if (bannedImgKeywords.some((b) => lower.includes(b))) continue;
+      if (
+        lower.includes("uploads") ||
+        lower.includes("gallery") ||
+        lower.includes("project") ||
+        lower.includes("portfolio") ||
+        lower.includes("roof") ||
+        lower.includes("dji") ||
+        lower.includes("shingle")
+      ) {
+        try {
+          const fullUrl = new URL(rawSrc, targetUrl).href;
+          if (!detectedImages.includes(fullUrl) && detectedImages.length < 8) {
+            detectedImages.push(fullUrl);
+          }
+        } catch {}
+      }
+    }
+
+    // Crawl gallery page if fewer than 4 images found on home page
+    if (detectedImages.length < 4) {
+      const galleryLinkMatch = html.match(/href=["']([^"']*(?:gallery|portfolio|our-work|projects)[^"']*)["']/i);
+      if (galleryLinkMatch && galleryLinkMatch[1]) {
+        try {
+          const galUrl = new URL(galleryLinkMatch[1], targetUrl).href;
+          const galRes = await fetch(galUrl, {
+            signal: AbortSignal.timeout(3500),
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            },
+          });
+          if (galRes.ok) {
+            const galHtml = await galRes.text();
+            for (const match of galHtml.matchAll(attrRegex)) {
+              const rawSrc = match[1].split("?")[0];
+              const lower = rawSrc.toLowerCase();
+              if (bannedImgKeywords.some((b) => lower.includes(b))) continue;
+              if (
+                lower.includes("uploads") ||
+                lower.includes("gallery") ||
+                lower.includes("project") ||
+                lower.includes("portfolio") ||
+                lower.includes("roof") ||
+                lower.includes("dji")
+              ) {
+                try {
+                  const fullUrl = new URL(rawSrc, targetUrl).href;
+                  if (!detectedImages.includes(fullUrl) && detectedImages.length < 8) {
+                    detectedImages.push(fullUrl);
+                  }
+                } catch {}
+              }
+            }
+          }
+        } catch {}
+      }
+    }
+
+    const galleryImages = detectedImages.length > 0 ? detectedImages : [];
+
+    // 9. Structured Services with universal slugs
+    const structuredServices = services.map((svc) => {
+      let slug = "residential";
+      let archetype = "residential";
+      const lower = svc.toLowerCase();
+      if (lower.includes("tpo") || lower.includes("flat") || lower.includes("commercial")) {
+        slug = "commercial";
+        archetype = "commercial";
+      } else if (lower.includes("metal") || lower.includes("standing seam")) {
+        slug = "metal";
+        archetype = "metal";
+      } else if (lower.includes("storm") || lower.includes("hail") || lower.includes("damage")) {
+        slug = "storm-damage";
+        archetype = "storm-damage";
+      } else if (lower.includes("leak") || lower.includes("repair") || lower.includes("tarp")) {
+        slug = "repair";
+        archetype = "repair";
+      } else if (lower.includes("gutter") || lower.includes("drainage")) {
+        slug = "gutters";
+        archetype = "gutters";
+      } else if (lower.includes("wind") || lower.includes("mitigation") || lower.includes("florida")) {
+        slug = "wind-mitigation";
+        archetype = "wind-mitigation";
+      } else if (lower.includes("silicone") || lower.includes("coating")) {
+        slug = "coatings";
+        archetype = "coatings";
+      }
+      return {
+        title: svc,
+        slug,
+        archetype,
+        desc: `Certified ${svc.toLowerCase()} engineered to exceed local municipal building codes across ${cleanDomain}.`,
+      };
+    });
+
     const enrichedResult = {
       domain: cleanDomain,
       logo: logoUrl,
@@ -513,6 +622,8 @@ async function enrichDomain(rawDomain) {
       services,
       serviceAreas,
       reviews,
+      galleryImages,
+      structuredServices,
       isCommercial,
       enriched: true,
     };
