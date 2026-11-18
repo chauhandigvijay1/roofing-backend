@@ -255,6 +255,7 @@ async function enrichDomain(rawDomain) {
     reviews: [],
     galleryImages: [],
     structuredServices: [],
+    founderPhoto: null,
     isCommercial: false,
     enriched: false,
   };
@@ -537,6 +538,21 @@ async function enrichDomain(rawDomain) {
       }
     }
 
+    // 8b. Leadership / Founder Photo extraction
+    let detectedFounderPhoto = null;
+    const teamKeywords = ["founder", "owner", "president", "principal", "leadership", "headshot"];
+    for (const match of html.matchAll(attrRegex)) {
+      const rawSrc = match[1].split("?")[0];
+      const lower = rawSrc.toLowerCase();
+      if (bannedImgKeywords.some((b) => lower.includes(b))) continue;
+      if (teamKeywords.some((k) => lower.includes(k))) {
+        try {
+          detectedFounderPhoto = new URL(rawSrc, targetUrl).href;
+          break;
+        } catch {}
+      }
+    }
+
     // Crawl gallery page if fewer than 4 images found on home page
     if (detectedImages.length < 4) {
       const galleryLinkMatch = html.match(/href=["']([^"']*(?:gallery|portfolio|our-work|projects)[^"']*)["']/i);
@@ -626,6 +642,7 @@ async function enrichDomain(rawDomain) {
       reviews,
       galleryImages,
       structuredServices,
+      founderPhoto: detectedFounderPhoto,
       isCommercial,
       enriched: true,
     };
