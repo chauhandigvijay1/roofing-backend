@@ -239,6 +239,7 @@ async function enrichDomain(rawDomain) {
       "Emergency Storm & Leak Repair",
       "Attic Ventilation & Thermal Survey",
     ],
+    serviceAreas: [],
     isCommercial: false,
     enriched: false,
   };
@@ -381,6 +382,47 @@ async function enrichDomain(rawDomain) {
 
     const services = detectedServices.length > 0 ? detectedServices : fallbackData.services;
 
+    // 6. Service Areas extraction
+    const detectedAreas = [];
+    for (const jm of jsonLdMatches) {
+      try {
+        const parsed = JSON.parse(jm[1].trim());
+        const candidates = parsed["@graph"] ? parsed["@graph"] : [parsed];
+        for (const c of candidates) {
+          if (c.areaServed) {
+            if (Array.isArray(c.areaServed)) {
+              for (const a of c.areaServed) {
+                const name = typeof a === "string" ? a : a?.name;
+                if (name && typeof name === "string" && !detectedAreas.includes(name.trim())) {
+                  detectedAreas.push(name.trim());
+                }
+              }
+            } else if (typeof c.areaServed === "string") {
+              const parts = c.areaServed.split(",").map((s) => s.trim()).filter(Boolean);
+              for (const p of parts) {
+                if (!detectedAreas.includes(p)) detectedAreas.push(p);
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
+    if (detectedAreas.length === 0) {
+      const areaSectionMatch = html.match(/(?:areas\s+we\s+serve|service\s+areas|serving\s+the\s+greater|cities\s+served)[\s\S]{1,600}?(?:<\/div>|<\/section>|<\/ul>)/i);
+      if (areaSectionMatch) {
+        const liMatches = areaSectionMatch[0].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi);
+        for (const li of liMatches) {
+          const cleanCity = li[1].replace(/<[^>]+>/g, "").trim();
+          if (cleanCity.length > 2 && cleanCity.length < 35 && !detectedAreas.includes(cleanCity)) {
+            detectedAreas.push(cleanCity);
+          }
+        }
+      }
+    }
+
+    const serviceAreas = detectedAreas.length > 0 ? detectedAreas.slice(0, 10) : [];
+
     const enrichedResult = {
       domain: cleanDomain,
       logo: logoUrl,
@@ -389,6 +431,7 @@ async function enrichDomain(rawDomain) {
       rating,
       reviewsCount,
       services,
+      serviceAreas,
       isCommercial,
       enriched: true,
     };
