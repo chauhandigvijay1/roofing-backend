@@ -608,7 +608,7 @@ async function enrichDomain(rawDomain) {
         title: svc,
         slug,
         archetype,
-        desc: `Certified ${svc.toLowerCase()} engineered to exceed local municipal building codes across ${cleanDomain}.`,
+        desc: `Precision engineering, certified craftsmanship, and lifetime protection for ${svc.toLowerCase()} with ${cleanDomain}.`,
       };
     });
 
