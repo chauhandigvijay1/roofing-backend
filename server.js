@@ -67,6 +67,22 @@ CORE CAPABILITIES & INSTRUCTIONS:
 - STRICT FORMATTING: Do NOT output raw ASCII pipe tables (|---|). Always use bullet points and bold labels for comparisons.
 - PRICING REALISM: Typical residential roof replacements range between $8,500 and $16,000 for architectural shingles ($4.50 - $6.50/sq.ft.), and $16,000 to $25,000 for metal systems. Commercial TPO projects typically run $4.50 - $8.00/sq.ft. Never quote inflated six-figure sums ($100k+) for standard residential roofs.`;
 
+function decodeHtmlEntities(str = "") {
+  if (!str || typeof str !== "string") return "";
+  return str
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;/gi, "'")
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .trim();
+}
+
 function extractState(cityStr = "") {
   if (!cityStr || typeof cityStr !== "string") return "";
   const match = cityStr.match(/,\s*([A-Za-z]{2})\b/);
@@ -633,15 +649,19 @@ async function enrichDomain(rawDomain) {
     const enrichedResult = {
       domain: cleanDomain,
       logo: logoUrl,
-      tagline,
-      aboutText,
+      tagline: decodeHtmlEntities(tagline),
+      aboutText: decodeHtmlEntities(aboutText),
       rating,
       reviewsCount,
-      services,
-      serviceAreas,
+      services: services.map(decodeHtmlEntities),
+      serviceAreas: serviceAreas.map(decodeHtmlEntities),
       reviews,
       galleryImages,
-      structuredServices,
+      structuredServices: structuredServices.map((s) => ({
+        ...s,
+        title: decodeHtmlEntities(s.title),
+        desc: decodeHtmlEntities(s.desc),
+      })),
       founderPhoto: detectedFounderPhoto,
       isCommercial,
       enriched: true,
