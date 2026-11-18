@@ -223,5 +223,10 @@ describe("Roofing Backend Universal API Tests", () => {
     assert.strictEqual(generalReply.includes("Jim Jessup"), false);
     assert.strictEqual(generalReply.includes("Drew Boy"), false);
     assert.strictEqual(generalReply.includes("Richard"), false);
+
+    const repairReply = getGracefulFallback("tell me the price of residential roof repair of 2000 sq ft", brand);
+    assert.ok(repairReply.includes("$350–$1,250"));
+    assert.ok(repairReply.includes("$9,600–$12,400"));
+    assert.ok(repairReply.includes("[ACTION:BOOK]"));
   });
 });
