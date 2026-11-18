@@ -84,7 +84,6 @@ function buildSystemPrompt(brand = {}) {
   const phone = brand.phone || "(800) 555-ROOF";
   const email = brand.email || "";
   const tagline = brand.tagline || "Elite Craftsmanship, Transparent Pricing & Lifetime Protection";
-  const aboutText = brand.aboutText || "";
   const founderName = brand.founderName || "";
   const founderTitle = brand.founderTitle || "";
   const licenseNumber = brand.licenseNumber || "";
@@ -99,69 +98,44 @@ function buildSystemPrompt(brand = {}) {
 
   let regionalExpertise = "";
   if (isFlorida) {
-    regionalExpertise = `
-- High-Velocity Hurricane Zone & Florida Building Code (140+ MPH wind fastening, secondary water barrier, sealed roof deck).
-- Official Florida Wind Mitigation Inspections: Helping Florida homeowners save $500 to $1,200 per year on homeowners insurance premiums through verified hurricane clips, FBC-approved roof coverings, and third-party inspection forms.
-- Rapid emergency storm leak tarping and full hurricane restoration.`;
+    regionalExpertise = "Florida Wind Mitigation Inspections: Helping Florida homeowners save on statutory insurance premiums with FBC-compliant hurricane clips and secondary water barrier inspection reports.";
   } else if (isTexas) {
-    regionalExpertise = `
-- Severe Texas Weather & Hail Defense: Class 4 impact-resistant shingles (Armorshield II, Timberline HDZ) and heavy-gauge standing seam metal.
-- Attic Thermodynamic Ventilation: Radiant barrier analysis, airflow intake/exhaust balancing, and extreme heat reduction.
-- 100% Texas HB 2102 Deductible Compliance: Full integrity insurance claim scoping with licensed adjusters. Zero illegal deductible waiving.`;
-  } else {
-    regionalExpertise = `
-- Extreme Weather & Storm Restoration: Impact-resistant Class 4 shingles, continuous ridge ventilation, and comprehensive ice/water deck protection.
-- Insurance Claim Forensic Scoping: Transparent digital damage reports for full insurance replacement approval.`;
+    regionalExpertise = "Texas HB 2102 Deductible Compliance: Full integrity insurance claim forensic scoping with licensed adjusters. Zero illegal deductible waiving.";
   }
 
   let commercialExpertise = "";
   if (isCommercial) {
-    commercialExpertise = `
-- Commercial Flat Roofing Authority: 60-mil/80-mil TPO, PVC single-ply membranes, modified bitumen, and liquid-applied silicone restoration coatings.
-- Commercial Energy Efficiency: Cool roof reflectivity reducing building cooling loads, ponding water drainage correction, and 20-30 year NDL (No Dollar Limit) manufacturer warranties.`;
+    commercialExpertise = "Commercial Flat Roofing Authority: Certified 60-mil/80-mil TPO heat-welded single-ply membranes, modified bitumen, and liquid-applied silicone restoration coatings backed by 20-30 year NDL warranties.";
   }
 
-  const founderSection = founderName
-    ? `Leadership: Led by ${founderName}${founderTitle ? ` (${founderTitle})` : ""}. Built on integrity, exceptional craftsmanship, and personal accountability.`
-    : "Leadership: Built on master craftsmanship, certified supervision on every job, and personal accountability.";
-
-  const licenseSection = licenseNumber
-    ? `Credentials & Licensing: ${licenseNumber}. Fully licensed, bonded, and insured.`
-    : "Credentials & Licensing: Fully licensed, bonded, and carries $2,000,000+ general liability and workers' compensation coverage.";
-
-  return `You are the Elite AI Roofing Concierge for ${brandName} serving ${city}.
+  return `You are the Elite Lead Qualification AI Concierge for ${brandName} serving ${city} (${state || "USA"}).
+Direct Dispatch Hotline: ${phone}${email ? ` | Email: ${email}` : ""}
+${founderName ? `Company Principal: ${founderName}${founderTitle ? ` (${founderTitle})` : ""}` : ""}
+${licenseNumber ? `Credentials & Licensing: ${licenseNumber}` : ""}
 Tagline: "${tagline}"
-${founderSection}
-${licenseSection}
-${aboutText ? `Company Overview: ${aboutText}` : ""}
-Direct Contact: Phone: ${phone}${email ? `, Email: ${email}` : ""}.
-
-CORE SPECIALTIES & TECHNICAL CAPABILITIES:
 ${regionalExpertise}
 ${commercialExpertise}
-- Residential Systems: Architectural shingles (GAF, Owens Corning, CertainTeed), stone-coated steel, and designer metal roofing.
-- Initial Roof Inspections: 100% free with comprehensive photo reports and zero high-pressure sales tactics.
 
-CORE INSTRUCTIONS & WORKFLOWS:
+YOUR PRIMARY PURPOSE:
+Help property owners get immediate clarity on their roof, answer their specific questions directly, qualify their project scope, and guide them into scheduling a complimentary 21-point on-site inspection.
 
-1. INTELLIGENT APPOINTMENT SCHEDULING:
-- Proactively offer priority inspection windows (Morning: 9:00 AM - 11:30 AM; Afternoon: 2:00 PM - 4:30 PM for today or the next business day).
-- Gather essential property details: Full Name, Phone Number, Property Address/Zip Code in ${city}, and Specific Concern (leak, storm/hail assessment, full replacement, or inspection).
-- Lock reservation: Confirm that the slot is reserved in ${brandName}'s master dispatch calendar, and automated .ics calendar invite and SMS confirmation are dispatched.
+STRICT RESPONSE RULES (NON-NEGOTIABLE):
+1. BREVITY & CONVERSATION: Maximum 2 to 3 concise, natural sentences per response (under 50 words). Never write essays, multi-paragraph lectures, or bullet lists.
+2. DIRECT ANSWER FIRST: If the user asks about price, timeline, or warranty, state the realistic answer for ${city} immediately in sentence 1, then ask 1 qualifying question in sentence 2.
+3. ZERO INVOICE GENERATION: Never invent simulated invoice deposit numbers (#INV-...), tax lines, or payment processing mockups. Inspections and quotes with ${brandName} are always 100% free with zero deposit.
+4. ACTION TRIGGERS (Append exactly ONE tag at the end when intent matches):
+   - [ACTION:BOOK] -> Use when user wants to schedule, inspect, get a written quote, or confirms a time.
+   - [ACTION:CALC] -> Use when user asks about ballpark pricing, cost per square foot, or cost comparisons.
+   - [ACTION:CALL] -> Use when user reports an active emergency leak, interior ceiling dripping, or immediate storm damage.
 
-2. ADVANCE PAYMENTS, INVOICE GENERATION & FINANCING:
-- Detail payment options: Major cards, ACH, and $0 Down / 0% APR financing options.
-- Generate instant professional prototype invoice summaries on request (e.g., #INV-2026-XXXX, $250 - $500 inspection / materials deposit, status "Staged & Ready").
-- Confirm automated dispatch of tax-compliant PDF invoice and official digital receipt.
-
-3. TONE, STYLE & PRICING REALISM:
-- Authoritative, polished, responsive, and executive.
-- STRICT FORMATTING: Do NOT output raw ASCII pipe tables (|---|). Always use clean bold bullet points and clear sections.
-- PRICING REALISM: Standard residential roof replacements range between $8,500 and $16,000 for architectural shingles ($4.50 - $6.50/sq.ft.), and $16,000 to $25,000 for metal systems. Commercial TPO projects typically run $4.50 - $8.00/sq.ft. depending on deck insulation and square footage. Never quote inflated six-figure sums ($100k+) for standard single-family residential homes.
-- If the customer reaches 10 exchanges, guide them warmly into our priority calendar booking flow.`;
+LEAD QUALIFICATION PLAYBOOK:
+- Active Leaks: Acknowledge urgency immediately. Instruct them to call ${phone} for rapid dispatch or request immediate inspection. [ACTION:CALL]
+- Residential Replacement: Architectural shingles in ${city} run $4.80–$6.20/sq ft ($11,000–$16,500 turnkey for a typical 2,500 sq ft home) with lifetime warranty. Ask for their approximate square footage or address. [ACTION:CALC]
+- Commercial Projects: Confirm our commercial flat roofing division in 60-mil/80-mil TPO and silicone coatings with 20-year NDL warranties. Ask for approximate building square footage. [ACTION:CALC]
+- Booking / Appointments: State open priority slots tomorrow morning (9:00 AM - 11:30 AM) or afternoon (2:00 PM - 4:30 PM). Ask which window fits their schedule. [ACTION:BOOK]`;
 }
 
-// Fallback response generator if all external AI services are unavailable
+// Ultra-concise, high-converting qualifying fallback responses
 function getGracefulFallback(userMessage = "", brand = null) {
   const lower = (userMessage || "").toLowerCase();
   const brandName = brand?.name || "Premium Roofing";
@@ -169,31 +143,22 @@ function getGracefulFallback(userMessage = "", brand = null) {
   const phone = brand?.phone || "(800) 555-ROOF";
 
   if (lower.includes("book") || lower.includes("schedule") || lower.includes("appointment") || lower.includes("inspect")) {
-    return (
-      `I would be delighted to schedule a free roof inspection for you with ${brandName} in ${city}! We have priority openings tomorrow at 9:00 AM, 11:30 AM, and 2:00 PM.\n\n` +
-      "To hold your slot in our calendar, please reply with:\n" +
-      "• Your Full Name\n" +
-      "• Phone Number\n" +
-      "• Property Address\n\n" +
-      `Once received, our lead specialist will reserve your appointment and send a calendar invitation directly to your phone. You can also call our dispatch line directly at ${phone}.`
-    );
+    return `We'd love to schedule your free 21-point on-site inspection in ${city} with ${brandName}! We have open priority windows tomorrow morning at 9:00 AM and afternoon at 2:00 PM. You can also reach our dispatch desk directly at ${phone}. [ACTION:BOOK]`;
   }
 
-  if (lower.includes("pay") || lower.includes("deposit") || lower.includes("invoice") || lower.includes("receipt")) {
-    const invId = `#INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    return (
-      "We make payments and invoicing seamless!\n\n" +
-      `• **Invoice ${invId}**: Priority Inspection & Materials Deposit ($250.00)\n` +
-      "• **Payment Method**: Secure Card/ACH or 0% APR Financing\n" +
-      "• **Receipt & Invoice Dispatch**: Sent automatically to your email upon confirmation.\n\n" +
-      "Please share your preferred email address so we can route your official itemized PDF invoice and secure payment confirmation!"
-    );
+  if (lower.includes("price") || lower.includes("cost") || lower.includes("quote") || lower.includes("estimate") || lower.includes("how much")) {
+    return `For residential roofs in ${city}, architectural shingles typically range from $4.80 to $6.20 per square foot installed with lifetime warranty. Would you like to model your exact square footage in our instant calculator or schedule a free on-site survey? [ACTION:CALC]`;
   }
 
-  return (
-    `Welcome to ${brandName} serving ${city}! We provide certified residential and commercial roofing solutions, 24/7 emergency leak response, and lifetime manufacturer warranties.\n\n` +
-    `How can our team assist you today? You can ask to book a free 21-point roof inspection, calculate an instant estimate, or call our direct dispatch line at ${phone}.`
-  );
+  if (lower.includes("leak") || lower.includes("emergency") || lower.includes("storm") || lower.includes("water") || lower.includes("drip") || lower.includes("hole")) {
+    return `If you have an active leak or emergency damage in ${city}, our rapid dispatch team is on call. Please call our direct hotline at ${phone} or tap below to request priority emergency dispatch. [ACTION:CALL]`;
+  }
+
+  if (lower.includes("commercial") || lower.includes("tpo") || lower.includes("flat") || lower.includes("warehouse") || lower.includes("building")) {
+    return `We specialize in commercial flat roofs, TPO heat-welded membranes, and silicone coatings across ${city} backed by 20-year NDL warranties. Approximately how many square feet is your commercial facility? [ACTION:CALC]`;
+  }
+
+  return `Welcome to ${brandName} in ${city}! We provide certified residential replacements, commercial flat roofing, and emergency storm restorations. Are you experiencing an active roof issue, or planning a replacement estimate?`;
 }
 
 let groq = null;
@@ -225,6 +190,8 @@ async function generateChatCompletion(messages, latestUserMessage = "", brand = 
       const completion = await groqClient.chat.completions.create({
         model,
         messages,
+        max_tokens: 350,
+        temperature: 0.6,
       });
       const reply = completion.choices[0]?.message?.content;
       if (reply) {
